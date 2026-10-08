@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 5 Crypto 10-Year History</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            background: -webkit-linear-gradient(#00ff88, #00b3ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(45deg, #00ff88, #00b3ff);
+            color: #121212;
+            font-weight: bold;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
+        }
+        button:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .predict-btn {
+            background: linear-gradient(45deg, #ff00ff, #00b3ff);
+            box-shadow: 0 4px 15px rgba(255, 0, 255, 0.3);
+        }
+        .predict-btn:hover {
+            box-shadow: 0 6px 20px rgba(255, 0, 255, 0.5);
+        }
+        #chart-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #1e1e1e;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            border: 1px solid #333;
+        }
+        .predictions-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+        .pred-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 15px 20px;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .pred-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .pred-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .pred-mape {
+            font-size: 0.9rem;
+            color: #aaaaaa;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <h1>Top 5 Crypto Prices - Last 10 Years</h1>
+        <div class="btn-group">
+            <button id="update-btn" onclick="updateChart()">실시간 업데이트 (Update)</button>
+            <button id="predict-btn" class="predict-btn" onclick="predictFuture()">AI 미래 가격 예측 (Predict)</button>
+            <button id="kosis-btn" onclick="fetchKosis()" style="background: linear-gradient(45deg, #00b3ff, #ff9900);">KOSIS 데이터 추가 연결</button>
+        </div>
+    </div>
+    
+    <div id="predictions" class="predictions-container"></div>
+    
+    <div id="chart-container">
+        <div id="chart"></div>
+    </div>
+    
+    <div id="kosis-chart-container" style="display: none; width: 100%; max-width: 1200px; margin: 30px auto; background-color: #1e1e1e; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; border: 1px solid #333;">
+        <div id="kosis-chart"></div>
+        <p style="text-align: center; color: #888; margin-top: 10px; font-size: 0.9rem;">※ ETF 시장 거래대금은 전체 금융 시장의 투자 유동성을 나타내며, 가상화폐 시장의 자금 유입을 가늠하는 거시 지표로 활용될 수 있습니다.</p>
+    </div>
+
+    <script>
+        var graphs = {{ graphJSON | safe }};
+        Plotly.newPlot('chart', graphs.data, graphs.layout, {responsive: true});
+
+        async function updateChart() {
+            const btn = document.getElementById('update-btn');
+            btn.disabled = true;
+            btn.innerText = '업데이트 중...';
+
+            try {
+                const response = await fetch('/api/update');
+                if (!response.ok) throw new Error('Network error');
+                const newGraphs = await response.json();
+                Plotly.react('chart', newGraphs.data, newGraphs.layout, {responsive: true});
+                document.getElementById('predictions').innerHTML = ''; // 예측 초기화
+            } catch (error) {
+                console.error(error);
+                alert('업데이트 실패!');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '실시간 업데이트 (Update)';
+            }
+        }
+
+        async function predictFuture() {
+            const btn = document.getElementById('predict-btn');
+            btn.disabled = true;
+            btn.innerText = 'AI 예측 모델 구동 중... (Training...)';
+            const container = document.getElementById('predictions');
+            container.innerHTML = '<p style="color:#00ff88;">DecisionTreeRegressor 학습 및 평가 진행 중...</p>';
+
+            try {
+                const response = await fetch('/api/predict');
+                if (!response.ok) throw new Error('Network error');
+                const results = await response.json();
+                
+                container.innerHTML = '';
+                
+                // 오늘 날짜 가져와서 내일 날짜 계산
+                let tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                let tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+                let newTraces = [];
+                
+                for (const [coin, data] of Object.entries(results)) {
+                    // 카드 생성
+                    const card = document.createElement('div');
+                    card.className = 'pred-card';
+                    card.style.borderTop = `4px solid ${data.color}`;
+                    
+                    let mapeStyle = data.mape < 5 ? "color: #00ff88;" : "color: #ffaa00;";
+                    let mapeText = data.mape < 5 ? `MAPE: ${data.mape.toFixed(2)}% (Excellent)` : `MAPE: ${data.mape.toFixed(2)}%`;
+
+                    card.innerHTML = `
+                        <div class="pred-title" style="color: ${data.color};">${coin} 예측 (내일)</div>
+                        <div class="pred-price">$${data.predicted_price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div class="pred-mape" style="${mapeStyle}">${mapeText}</div>
+                        <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Model: ${data.best_model}</div>
+                    `;
+                    container.appendChild(card);
+
+                    // 차트에 찍을 예측 점 추가
+                    newTraces.push({
+                        x: [tomorrowStr],
+                        y: [data.predicted_price],
+                        mode: 'markers+text',
+                        name: `${coin} Predict`,
+                        marker: {
+                            color: data.color,
+                            size: 10,
+                            symbol: 'star'
+                        },
+                        text: [`$${data.predicted_price.toFixed(0)}`],
+                        textposition: 'top center',
+                        showlegend: false
+                    });
+                }
+                
+                // 기존 차트에 예측 포인트 덮어그리기
+                Plotly.addTraces('chart', newTraces);
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<p style="color:red;">예측에 실패했습니다.</p>';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'AI 미래 가격 예측 (Predict)';
+            }
+        }
+
+        async function fetchKosis() {
+            const btn = document.getElementById('kosis-btn');
+            btn.disabled = true;
+            btn.innerText = 'KOSIS 데이터 가져오는 중...';
+            
+            try {
+                const response = await fetch('/api/kosis');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert(`저장 완료!\n파일명: ${result.file_name}\n데이터 행 수: ${result.rows}\n데이터 열 수: ${result.columns}`);
+                    
+                    // KOSIS 차트 표시
+                    document.getElementById('kosis-chart-container').style.display = 'block';
+                    
+                    const trace = {
+                        x: result.chart_data.x,
+                        y: result.chart_data.y,
+                        type: 'bar',
+                        marker: {
+                            color: '#00b3ff',
+                            opacity: 0.8
+                        },
+                        name: 'ETF 월별 거래대금'
+                    };
+                    
+                    const layout = {
+                        title: '거시 경제 지표: 국내 ETF 월별 총 거래대금 (유동성 참고)',
+                        template: 'plotly_dark',
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)',
+                        xaxis: { title: 'Date' },
+                        yaxis: { title: '거래대금 규모' },
+                        margin: { t: 50, b: 50, l: 50, r: 50 }
+                    };
+                    
+                    Plotly.newPlot('kosis-chart', [trace], layout, {responsive: true});
+                } else {
+                    alert(`오류 발생: ${result.message}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('KOSIS 데이터 요청 실패!');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'KOSIS 데이터 추가 연결';
+            }
+        }
+    </script>
+</body>
+</html>
